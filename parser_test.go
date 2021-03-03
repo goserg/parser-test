@@ -6,17 +6,29 @@ import (
 	"github.com/Masterminds/squirrel"
 )
 
-func TestParser(t *testing.T) {
-	subQ := squirrel.Select("aa").From("bb")
-	got, err := Parse("Foo.Bar.X = 'hello'", subQ)
-	gotSQL, gotArgs, _ := got.ToSql()
-	if err != nil {
-		t.Errorf(`Parse("Foo.Bar.X = 'hello'", db) error = %d; want error = nil`, err)
-	}
+type addTest struct {
+	arg      string
+	expected interface{}
+}
 
-	want := subQ.Where(squirrel.Eq{"Foo.Bar.X": "hello"})
-	wantSQL, wantArgs, _ := want.ToSql()
-	if wantSQL != gotSQL || wantArgs[0] != gotArgs[0] {
-		t.Errorf(`Parse("Foo.Bar.X = 'hello'", db): got sql = "%s", want "%s"; got arg = "%s", want "%s"`, gotSQL, wantSQL, gotArgs, wantArgs)
+var addTests = []addTest{
+	{"Foo.Bar.X = 'hello'", squirrel.Eq{"Foo.Bar.X": "hello"}},
+	{"Bar.Alpha = 7", squirrel.Eq{"Bar.Alpha": "7"}},
+}
+
+func TestParsers(t *testing.T) {
+	for _, test := range addTests {
+		subQ := squirrel.Select("aa").From("bb")
+		got, err := Parse(test.arg, subQ)
+		gotSQL, gotArgs, _ := got.ToSql()
+		if err != nil {
+			t.Errorf(`Parse(%s, db) error = %d; want error = nil`, test.arg, err)
+		}
+
+		want := subQ.Where(test.expected)
+		wantSQL, wantArgs, _ := want.ToSql()
+		if wantSQL != gotSQL || wantArgs[0] != gotArgs[0] {
+			t.Errorf(`Parse(%s, db): got sql = "%s", want "%s"; got arg = %d, want %d`, test.arg, gotSQL, wantSQL, gotArgs[0], wantArgs[0])
+		}
 	}
 }

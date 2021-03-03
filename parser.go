@@ -1,9 +1,16 @@
 package parser
 
-import "github.com/Masterminds/squirrel"
+import (
+	"strings"
+
+	"github.com/Masterminds/squirrel"
+)
 
 //Parse - простой парсер WHERE части запросов SQL
 func Parse(query string, db squirrel.SelectBuilder) (*squirrel.SelectBuilder, error) {
-	db = db.Where(squirrel.Eq{"Foo.Bar.X": "hello"})
+	left := strings.Split(query, " ")[0]
+	right := strings.Split(query, " ")[2]
+	right = strings.Trim(right, `'"`)
+	db = db.Where(squirrel.Eq{left: right})
 	return &db, nil
 }
