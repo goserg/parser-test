@@ -1,3 +1,6 @@
+#### Заметки о задаче
+- Вопрос: есть ли необходимость в случае с numeric значениями как в "Bar.Alpha = 7" преобразовать "7" тип string в numeric тип для передачи в squirrel.Eq{}? Повлияет ли это на результирующий SQL запрос? Протестировав SQL запросы для базы данных Postgresql, я не заметил разницы между запросами типа "... WHERE aa=7;" и "... WHERE aa='7';". Кроме того документации postgresql я не нашел указание на то, что нельзя передавать numeric тип в одиночных кавычках. Принял решение для упрощения парсера передавать любые значения в виде строки.
+
 #### ТЗ
 
 Написать простой парсер WHERE части запросов SQL.
@@ -23,4 +26,4 @@ qb.Where(squirrel.Eq{left: val})
 - Bar.Alpha = 7
 - Foo.Bar.Beta > 21 AND Alpha.Bar != 'hello'
 - Alice.IsActive AND Bob.LastHash = 'ab5534b'
-- Alice.Name ~ 'A.*` OR Bob.LastName !~ 'Bill.*`
+- Alice.Name ~ 'A.*' OR Bob.LastName !~ 'Bill.*'
