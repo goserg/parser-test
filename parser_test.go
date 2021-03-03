@@ -14,7 +14,7 @@ func TestParser(t *testing.T) {
 		t.Errorf(`Parse("Foo.Bar.X = 'hello'", db) error = %d; want error = nil`, err)
 	}
 
-	want := subQ.Where(squirrel.Eq{"Foo.Bar.X": "helo"})
+	want := subQ.Where(squirrel.Eq{"Foo.Bar.X": "hello"})
 	wantSQL, wantArgs, _ := want.ToSql()
 	if wantSQL != gotSQL || wantArgs[0] != gotArgs[0] {
 		t.Errorf(`Parse("Foo.Bar.X = 'hello'", db): got sql = "%s", want "%s"; got arg = "%s", want "%s"`, gotSQL, wantSQL, gotArgs, wantArgs)
