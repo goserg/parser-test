@@ -194,7 +194,7 @@ func TestParseBool(t *testing.T) {
 	runTest(t, addTest{
 		"Alice.IsActive AND Bob.LastHash = 'ab5534b'",
 		squirrel.And{
-			squirrel.Eq{"Alice.IsActive": true},
+			squirrel.Eq{"Alice.IsActive": "true"},
 			squirrel.Eq{"Bob.LastHash": "ab5534b"},
 		},
 		nil,

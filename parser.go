@@ -83,7 +83,7 @@ func getNextExpr(query string) (squirrel.Sqlizer, string, error) {
 		return parseExpression(left, sign, right), query, nil
 	}
 	if isABooleanSign(sign) {
-		return squirrel.Eq{left: true}, query, nil
+		return squirrel.Eq{left: "true"}, query, nil
 	}
 	return nil, query, errors.New("Parsing error")
 }
