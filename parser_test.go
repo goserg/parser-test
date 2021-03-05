@@ -31,10 +31,13 @@ func TestParserError(t *testing.T) {
 		{"Foo.Bar.X 'hello'", nil, errors.New("Parsing error")},
 		{"Field1 = 'foo' AN Field2 != 7", nil, errors.New("Parsing error")},
 		{"Field1 = 'foo' AND", nil, errors.New("Parsing error")},
+		{"Field1 = 'foo' AND Field2 7", nil, errors.New("Parsing error")},
+		{"Field1 = 'foo' OR Field2 7", nil, errors.New("Parsing error")},
 		{"Field1 = 'foo' OR Field2 != 7 AND", nil, errors.New("Parsing error")},
 		{"Field1 = 'foo' AN Field2 != 7 OR Field3 > 11.7", nil, errors.New("Parsing error")},
 		{"Field1 = 'foo' AN Field2 != 7 AN Field3 > 11.7", nil, errors.New("Parsing error")},
 		{"Field1 = 'foo' AN Field2 != 7 O Field3", nil, errors.New("Parsing error")},
+		{"0Foo.Bar.X = 'hello'", nil, errors.New("Invalid column name")},
 	}
 	for _, test := range addTests {
 		runTest(t, test)
@@ -70,7 +73,7 @@ func runTest(t *testing.T, test addTest) {
 func TestParserNotEqual(t *testing.T) {
 	var addTests = []addTest{
 		{"Foo.Bar.X != 'hello'", squirrel.NotEq{"Foo.Bar.X": "hello"}, nil},
-		{"Foo.Bar.X <> 'hello'", squirrel.NotEq{"Foo.Bar.X": "hello"}, nil},
+		{"Foo.Bar.X <> 'hello '", squirrel.NotEq{"Foo.Bar.X": "hello "}, nil},
 	}
 	for _, test := range addTests {
 		runTest(t, test)
@@ -217,6 +220,14 @@ func TestParseLongQuery(t *testing.T) {
 			},
 			squirrel.Eq{"c": "3"},
 		},
+		nil,
+	})
+}
+
+func TestParseWithQuotesAndSpaceInColumnName(t *testing.T) {
+	runTest(t, addTest{
+		`"Hello world" = 'world'`,
+		squirrel.Eq{`"Hello world"`: "world"},
 		nil,
 	})
 }
