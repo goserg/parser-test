@@ -49,17 +49,33 @@ func parseExpression(left string, middle string, right string) squirrel.Sqlizer 
 }
 
 func getNextUnit(query string) (string, string) {
-	query = strings.Trim(query, " ")
-	indexOfFirstSpace := strings.Index(query, " ")
-	if indexOfFirstSpace == -1 {
+	delimiter := " "
+	if strings.HasPrefix(query, `"`) {
+		delimiter = `"`
+	} else if strings.HasPrefix(query, `'`) {
+		delimiter = `'`
+	}
+	query = strings.TrimLeft(query, delimiter)
+	indexOfFirstDelimiter := strings.Index(query, delimiter)
+	if indexOfFirstDelimiter == -1 {
 		return query, ""
 	}
-	return query[:indexOfFirstSpace], query[indexOfFirstSpace+1:]
+	left := query[:indexOfFirstDelimiter]
+	rest := query[indexOfFirstDelimiter+1:]
+	if delimiter == `"` {
+		left = `"` + left + `"`
+	}
+	return left, rest
 }
 
 func getNextExpr(query string) (squirrel.Sqlizer, string, error) {
 	var sign, left, right string
+
 	left, query = getNextUnit(query)
+	if !isColumnNameValid(left) {
+		return nil, "", errors.New("Invalid column name")
+	}
+
 	sign, _ = getNextUnit(query)
 	if isAComparisonSign(sign) {
 		_, query = getNextUnit(query)
@@ -72,19 +88,30 @@ func getNextExpr(query string) (squirrel.Sqlizer, string, error) {
 	return nil, query, errors.New("Parsing error")
 }
 
+func isColumnNameValid(name string) bool {
+	if strings.Index("0123456789", string(name[0])) != -1 {
+		return false
+	}
+
+	return true
+}
+
 func getNextANDBlock(query string) (squirrel.Sqlizer, string, error) {
 	var expr, nextExpr squirrel.Sqlizer
 	var err error
 	expr, query, err = getNextExpr(query)
 	if err != nil {
-		return nil, "", errors.New("Parsing error")
+		return nil, "", err
 	}
 	sign, _ := getNextUnit(query)
 	for sign == "AND" || sign == "and" {
 		_, query = getNextUnit(query)
+		if query == "" {
+			return nil, "", err
+		}
 		nextExpr, query, err = getNextExpr(query)
 		if err != nil {
-			return nil, "", errors.New("Parsing error")
+			return nil, "", err
 		}
 		expr = squirrel.And{expr, nextExpr}
 		sign, _ = getNextUnit(query)
@@ -119,15 +146,18 @@ func Parse(query string, db squirrel.SelectBuilder) (*squirrel.SelectBuilder, er
 		if expression == empty {
 			expression, query, err = getNextANDBlock(query)
 			if err != nil {
-				return nil, errors.New("Parsing error")
+				return nil, err
 			}
+		}
+		if query == "" {
+			break
 		}
 		sign, query = getNextUnit(query)
 		if isABooleanSign(sign) {
 			if sign == "OR" || sign == "or" {
 				rightExpr, query, err = getNextANDBlock(query)
 				if err != nil {
-					return nil, errors.New("Parsing error")
+					return nil, err
 				}
 				expression = squirrel.Or{expression, rightExpr}
 			}
@@ -135,4 +165,8 @@ func Parse(query string, db squirrel.SelectBuilder) (*squirrel.SelectBuilder, er
 	}
 	db = db.Where(expression)
 	return &db, nil
+}
+
+func isColAndValueValid(colName string, value interface{}) {
+
 }
