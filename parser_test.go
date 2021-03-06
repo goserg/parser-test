@@ -38,6 +38,21 @@ func TestParserError(t *testing.T) {
 		{"Field1 = 'foo' AN Field2 != 7 AN Field3 > 11.7", nil, errors.New("Parsing error")},
 		{"Field1 = 'foo' AN Field2 != 7 O Field3", nil, errors.New("Parsing error")},
 		{"0Foo.Bar.X = 'hello'", nil, errors.New("Invalid column name")},
+		{".Foo.Bar.X = 'hello'", nil, errors.New("Invalid column name")},
+		{"Foo*Bar.X = 'hello'", nil, errors.New("Invalid column name")},
+	}
+	for _, test := range addTests {
+		runTest(t, test)
+	}
+}
+
+func TestParseValidNames(t *testing.T) {
+	var addTests = []addTest{
+		{`Foo = 'bar'`, squirrel.Eq{"Foo": "bar"}, nil},
+		{`Фуу = 'бар'`, squirrel.Eq{"Фуу": "бар"}, nil},
+		{`Foo.bar = 'bar'`, squirrel.Eq{"Foo.bar": "bar"}, nil},
+		{`_Foo = 'bar'`, squirrel.Eq{"_Foo": "bar"}, nil},
+		{`"0Foo" = 'bar'`, squirrel.Eq{`"0Foo"`: "bar"}, nil},
 	}
 	for _, test := range addTests {
 		runTest(t, test)
@@ -57,7 +72,7 @@ func TestParserEqual(t *testing.T) {
 func runTest(t *testing.T, test addTest) {
 	subQ := squirrel.Select("aa").From("bb")
 	got, err := Parse(test.arg, subQ)
-	if err != nil && err.Error() != test.err.Error() {
+	if (test.err == nil && err != nil) || (test.err != nil && err == nil) || err != nil && err.Error() != test.err.Error() {
 		t.Errorf(`Parse(%s, db) error = %v; want error = %v`, test.arg, err, test.err.Error())
 	}
 	if test.err == nil {
