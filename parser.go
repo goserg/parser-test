@@ -120,7 +120,7 @@ func getNextANDBlock(query string) (squirrel.Sqlizer, string, error) {
 		return nil, "", err
 	}
 	sign.Value, _ = getNextUnit(query)
-	for sign.IsABoolSign() {
+	for sign.IsANDSign() {
 		_, query = getNextUnit(query)
 		if query == "" {
 			return nil, "", err
