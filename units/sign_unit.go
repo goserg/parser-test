@@ -33,3 +33,8 @@ func (s *SignUnit) IsAComparisonSign() bool {
 	}
 	return false
 }
+
+//IsValidSign возвращает true если знак валидный
+func (s *SignUnit) IsValidSign() bool {
+	return s.IsABoolSign() || s.IsAComparisonSign()
+}

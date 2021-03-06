@@ -119,11 +119,17 @@ func getNextANDBlock(query string) (squirrel.Sqlizer, string, error) {
 	if err != nil {
 		return nil, "", err
 	}
+	if query == "" {
+		return expr, query, nil
+	}
 	sign.Value, _ = getNextUnit(query)
+	if !sign.IsValidSign() {
+		return nil, "", errors.New("Parsing error")
+	}
 	for sign.IsANDSign() {
 		_, query = getNextUnit(query)
 		if query == "" {
-			return nil, "", err
+			return nil, "", errors.New("Parsing error")
 		}
 		nextExpr, query, err = getNextExpr(query)
 		if err != nil {
