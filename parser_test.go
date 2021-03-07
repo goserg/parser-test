@@ -40,6 +40,7 @@ func TestParserError(t *testing.T) {
 		{"0Foo.Bar.X = 'hello'", nil, errors.New("Invalid column name")},
 		{".Foo.Bar.X = 'hello'", nil, errors.New("Invalid column name")},
 		{"Foo*Bar.X = 'hello'", nil, errors.New("Invalid column name")},
+		{`"" = 'hello'`, nil, errors.New("Invalid column name")},
 	}
 	for _, test := range tests {
 		runTest(t, test)
