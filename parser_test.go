@@ -7,9 +7,9 @@ import (
 	"github.com/Masterminds/squirrel"
 )
 
-type addTest struct {
+type testData struct {
 	arg      string
-	expected interface{}
+	expected squirrel.Sqlizer
 	err      error
 }
 
@@ -27,7 +27,7 @@ func TestParserEmpty(t *testing.T) {
 }
 
 func TestParserError(t *testing.T) {
-	var addTests = []addTest{
+	var tests = []testData{
 		{"Foo.Bar.X 'hello'", nil, errors.New("Parsing error")},
 		{"Field1 = 'foo' AN Field2 != 7", nil, errors.New("Parsing error")},
 		{"Field1 = 'foo' AND", nil, errors.New("Parsing error")},
@@ -41,41 +41,50 @@ func TestParserError(t *testing.T) {
 		{".Foo.Bar.X = 'hello'", nil, errors.New("Invalid column name")},
 		{"Foo*Bar.X = 'hello'", nil, errors.New("Invalid column name")},
 	}
-	for _, test := range addTests {
+	for _, test := range tests {
 		runTest(t, test)
 	}
 }
 
 func TestParseValidNames(t *testing.T) {
-	var addTests = []addTest{
+	var tests = []testData{
 		{`Foo = 'bar'`, squirrel.Eq{"Foo": "bar"}, nil},
 		{`Фуу = 'бар'`, squirrel.Eq{"Фуу": "бар"}, nil},
 		{`Foo.bar = 'bar'`, squirrel.Eq{"Foo.bar": "bar"}, nil},
 		{`_Foo = 'bar'`, squirrel.Eq{"_Foo": "bar"}, nil},
 		{`"0Foo" = 'bar'`, squirrel.Eq{`"0Foo"`: "bar"}, nil},
 	}
-	for _, test := range addTests {
+	for _, test := range tests {
 		runTest(t, test)
 	}
 }
 
 func TestParserEqual(t *testing.T) {
-	var addTests = []addTest{
+	var tests = []testData{
 		{"Foo.Bar.X = 'hello'", squirrel.Eq{"Foo.Bar.X": "hello"}, nil},
 		{"Bar.Alpha = 7", squirrel.Eq{"Bar.Alpha": "7"}, nil},
 	}
-	for _, test := range addTests {
+	for _, test := range tests {
 		runTest(t, test)
 	}
 }
 
-func runTest(t *testing.T, test addTest) {
+func runTest(t *testing.T, test testData) {
 	subQ := squirrel.Select("aa").From("bb")
 	got, err := Parse(test.arg, subQ)
-	if (test.err == nil && err != nil) || (test.err != nil && err == nil) || err != nil && err.Error() != test.err.Error() {
-		t.Errorf(`Parse(%s, db) error = %v; want error = %v`, test.arg, err, test.err.Error())
+	if test.err == nil && err != nil {
+		t.Errorf(`Parse(%s, db): Got unexpected error`, test.arg)
+		t.FailNow()
 	}
-	if test.err == nil {
+	if test.err != nil && err == nil {
+		t.Errorf(`Parse(%s, db): got no error; want error = %v`, test.arg, test.err.Error())
+		t.FailNow()
+	}
+	if err != nil && err.Error() != test.err.Error() {
+		t.Errorf(`Parse(%s, db) error = %v; want error = %v`, test.arg, err, test.err.Error())
+		t.FailNow()
+	}
+	if test.expected != nil {
 		gotSQL, gotArgs, _ := got.ToSql()
 		want := subQ.Where(test.expected)
 		wantSQL, wantArgs, _ := want.ToSql()
@@ -86,49 +95,49 @@ func runTest(t *testing.T, test addTest) {
 }
 
 func TestParserNotEqual(t *testing.T) {
-	var addTests = []addTest{
+	var tests = []testData{
 		{"Foo.Bar.X != 'hello'", squirrel.NotEq{"Foo.Bar.X": "hello"}, nil},
 		{"Foo.Bar.X <> 'hello '", squirrel.NotEq{"Foo.Bar.X": "hello "}, nil},
 	}
-	for _, test := range addTests {
+	for _, test := range tests {
 		runTest(t, test)
 	}
 }
 
 func TestParserLike(t *testing.T) {
-	runTest(t, addTest{"Alice.Name ~ 'A.'", squirrel.Like{"Alice.Name": "A."}, nil})
+	runTest(t, testData{"Alice.Name ~ 'A.'", squirrel.Like{"Alice.Name": "A."}, nil})
 }
 
 func TestParserNotLike(t *testing.T) {
-	runTest(t, addTest{"Bob.LastName !~ 'Bill.'", squirrel.NotLike{"Bob.LastName": "Bill."}, nil})
+	runTest(t, testData{"Bob.LastName !~ 'Bill.'", squirrel.NotLike{"Bob.LastName": "Bill."}, nil})
 }
 
 func TestParserILike(t *testing.T) {
-	runTest(t, addTest{"Alice.Name ~* 'A.'", squirrel.ILike{"Alice.Name": "A."}, nil})
+	runTest(t, testData{"Alice.Name ~* 'A.'", squirrel.ILike{"Alice.Name": "A."}, nil})
 }
 
 func TestParserNotILike(t *testing.T) {
-	runTest(t, addTest{"Alice.Name !~* 'A.'", squirrel.NotILike{"Alice.Name": "A."}, nil})
+	runTest(t, testData{"Alice.Name !~* 'A.'", squirrel.NotILike{"Alice.Name": "A."}, nil})
 }
 
 func TestParserGt(t *testing.T) {
-	runTest(t, addTest{"Price > 1000", squirrel.Gt{"Price": "1000"}, nil})
+	runTest(t, testData{"Price > 1000", squirrel.Gt{"Price": "1000"}, nil})
 }
 
 func TestParserLt(t *testing.T) {
-	runTest(t, addTest{"Price < 1000", squirrel.Lt{"Price": "1000"}, nil})
+	runTest(t, testData{"Price < 1000", squirrel.Lt{"Price": "1000"}, nil})
 }
 
 func TestParserGtOrEq(t *testing.T) {
-	runTest(t, addTest{"Price >= 1000", squirrel.GtOrEq{"Price": "1000"}, nil})
+	runTest(t, testData{"Price >= 1000", squirrel.GtOrEq{"Price": "1000"}, nil})
 }
 
 func TestParserLtOrEq(t *testing.T) {
-	runTest(t, addTest{"Price <= 1000", squirrel.LtOrEq{"Price": "1000"}, nil})
+	runTest(t, testData{"Price <= 1000", squirrel.LtOrEq{"Price": "1000"}, nil})
 }
 
 func TestParserAND(t *testing.T) {
-	runTest(t, addTest{
+	runTest(t, testData{
 		"Foo.Bar.Beta > 21 AND Alpha.Bar != 'hello'",
 		squirrel.And{
 			squirrel.Gt{"Foo.Bar.Beta": "21"},
@@ -139,7 +148,7 @@ func TestParserAND(t *testing.T) {
 }
 
 func TestParserOR(t *testing.T) {
-	runTest(t, addTest{
+	runTest(t, testData{
 		"Foo.Bar.Beta > 21 OR Alpha.Bar != 'hello'",
 		squirrel.Or{
 			squirrel.Gt{"Foo.Bar.Beta": "21"},
@@ -150,7 +159,7 @@ func TestParserOR(t *testing.T) {
 }
 
 func TestParserANDOR(t *testing.T) {
-	runTest(t, addTest{
+	runTest(t, testData{
 		"Field1 = 'foo' AND Field2 != 7 OR Field3 > 11.7",
 		squirrel.Or{
 			squirrel.And{
@@ -164,7 +173,7 @@ func TestParserANDOR(t *testing.T) {
 }
 
 func TestParserORAND(t *testing.T) {
-	runTest(t, addTest{
+	runTest(t, testData{
 		"Field1 = 'foo' OR Field2 != 7 AND Field3 > 11.7",
 		squirrel.Or{
 			squirrel.Eq{"Field1": "foo"},
@@ -178,7 +187,7 @@ func TestParserORAND(t *testing.T) {
 }
 
 func TestParserANDAND(t *testing.T) {
-	runTest(t, addTest{
+	runTest(t, testData{
 		"Field1 = 'foo' AND Field2 != 7 AND Field3 > 11.7",
 		squirrel.And{
 			squirrel.And{
@@ -192,7 +201,7 @@ func TestParserANDAND(t *testing.T) {
 }
 
 func TestParserOROR(t *testing.T) {
-	runTest(t, addTest{
+	runTest(t, testData{
 		"Field1 = 'foo' OR Field2 != 7 OR Field3 > 11.7",
 		squirrel.Or{
 			squirrel.Or{
@@ -206,7 +215,7 @@ func TestParserOROR(t *testing.T) {
 }
 
 func TestParseBool(t *testing.T) {
-	runTest(t, addTest{
+	runTest(t, testData{
 		"Alice.IsActive AND Bob.LastHash = 'ab5534b'",
 		squirrel.And{
 			squirrel.Eq{"Alice.IsActive": "true"},
@@ -217,7 +226,7 @@ func TestParseBool(t *testing.T) {
 }
 
 func TestParseLongQuery(t *testing.T) {
-	runTest(t, addTest{
+	runTest(t, testData{
 		"a = 1 AND b = 2 AND c != 1 OR a = 2 AND b = 1 OR c = 3",
 		squirrel.Or{
 			squirrel.Or{
@@ -240,7 +249,7 @@ func TestParseLongQuery(t *testing.T) {
 }
 
 func TestParseWithQuotesAndSpaceInColumnName(t *testing.T) {
-	runTest(t, addTest{
+	runTest(t, testData{
 		`"Hello world" = 'world'`,
 		squirrel.Eq{`"Hello world"`: "world"},
 		nil,
