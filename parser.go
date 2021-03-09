@@ -41,31 +41,33 @@ func Parse(query string, db squirrel.SelectBuilder) (*squirrel.SelectBuilder, er
 }
 
 func parseExpression(column units.ColumnUnit, sign units.SignUnit, value string) squirrel.Sqlizer {
+	var expr squirrel.Sqlizer
 	value = strings.Trim(value, `'`)
 	switch sign.Value {
 	case "=":
-		return squirrel.Eq{column.Name: value}
+		expr = squirrel.Eq{column.Name: value}
 	case "!=":
-		return squirrel.NotEq{column.Name: value}
+		expr = squirrel.NotEq{column.Name: value}
 	case "~":
-		return squirrel.Like{column.Name: value}
+		expr = squirrel.Like{column.Name: value}
 	case "!~":
-		return squirrel.NotLike{column.Name: value}
+		expr = squirrel.NotLike{column.Name: value}
 	case "~*":
-		return squirrel.ILike{column.Name: value}
+		expr = squirrel.ILike{column.Name: value}
 	case "!~*":
-		return squirrel.NotILike{column.Name: value}
+		expr = squirrel.NotILike{column.Name: value}
 	case "<>":
-		return squirrel.NotEq{column.Name: value}
+		expr = squirrel.NotEq{column.Name: value}
 	case ">":
-		return squirrel.Gt{column.Name: value}
+		expr = squirrel.Gt{column.Name: value}
 	case ">=":
-		return squirrel.GtOrEq{column.Name: value}
+		expr = squirrel.GtOrEq{column.Name: value}
 	case "<":
-		return squirrel.Lt{column.Name: value}
-	default: // case "<="
-		return squirrel.LtOrEq{column.Name: value}
+		expr = squirrel.Lt{column.Name: value}
+	case "<=":
+		expr = squirrel.LtOrEq{column.Name: value}
 	}
+	return expr
 }
 
 func getNextUnit(query string) (string, string) {
